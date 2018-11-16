@@ -685,6 +685,7 @@ table.CodeRay td.code>pre{padding:0}
 <ul class="sectlevel2">
 <li><a href="#technique_preload">Preloading Errors</a></li>
 <li><a href="#technique_defer">Capturing <code>errno</code> with <code>defer</code></a></li>
+<li><a href="#technique_disparate_error_types">Working with Disparate Error Codes</a></li>
 <li><a href="#technique_augment_in_catch">Augmenting Exceptions in a <code>catch</code></a></li>
 <li><a href="#technique_preload_in_c_callbacks">Using <code>peek_next_error</code> in C-callbacks</a></li>
 <li><a href="#technique_transport">Transporting Errors between Threads</a>
@@ -716,7 +717,7 @@ table.CodeRay td.code>pre{padding:0}
 <div class="ulist">
 <ul>
 <li>
-<p>Header-only, no dependencies.</p>
+<p>Header-only, C++11, no dependencies.</p>
 </li>
 <li>
 <p>No dynamic memory allocations.<sup class="footnote">[<a id="_footnoteref_1" class="footnote" href="#_footnotedef_1" title="View footnote.">1</a>]</sup></p>
@@ -1873,7 +1874,7 @@ The complete program from this tutorial is available <a href="https://github.com
 
 <span class="preprocessor">#define</span> LEAF_ERROR &lt;&lt;unspecified&gt;&gt;
 <span class="preprocessor">#define</span> LEAF_AUTO(v,r) <span class="directive">auto</span> _r_<span class="preprocessor">#</span><span class="preprocessor">#v</span> = r; <span class="keyword">if</span>( !_r_<span class="preprocessor">#</span><span class="preprocessor">#v</span> ) <span class="keyword">return</span> _r_<span class="preprocessor">#</span><span class="preprocessor">#v</span>.error(); <span class="directive">auto</span> &amp; v = *_r_<span class="preprocessor">#</span><span class="preprocessor">#v</span>
-<span class="preprocessor">#define</span> LEAF_CHECK(r) {<span class="directive">auto</span> _r_<span class="preprocessor">#</span><span class="preprocessor">#v</span> = r; <span class="keyword">if</span>( !_r_<span class="preprocessor">#</span><span class="preprocessor">#v</span> ) <span class="keyword">return</span> _r_<span class="preprocessor">#</span><span class="preprocessor">#v</span>.error();}</code></pre>
+<span class="preprocessor">#define</span> LEAF_CHECK(r) {<span class="directive">auto</span> _r = r; <span class="keyword">if</span>( !_r ) <span class="keyword">return</span> _r.error();}</code></pre>
 </div>
 </div>
 <div class="paragraph text-right">
@@ -3019,7 +3020,7 @@ The printing of each individual e-object is done by the rules described <a href=
 
 <span class="preprocessor">#define</span> LEAF_ERROR &lt;&lt;unspecified&gt;&gt;
 <span class="preprocessor">#define</span> LEAF_AUTO(v,r) <span class="directive">auto</span> _r_<span class="preprocessor">#</span><span class="preprocessor">#v</span> = r; <span class="keyword">if</span>( !_r_<span class="preprocessor">#</span><span class="preprocessor">#v</span> ) <span class="keyword">return</span> _r_<span class="preprocessor">#</span><span class="preprocessor">#v</span>.error(); <span class="directive">auto</span> &amp; v = *_r_<span class="preprocessor">#</span><span class="preprocessor">#v</span>
-<span class="preprocessor">#define</span> LEAF_CHECK(r) {<span class="directive">auto</span> _r_<span class="preprocessor">#</span><span class="preprocessor">#v</span> = r; <span class="keyword">if</span>( !_r_<span class="preprocessor">#</span><span class="preprocessor">#v</span> ) <span class="keyword">return</span> _r_<span class="preprocessor">#</span><span class="preprocessor">#v</span>.error();}</code></pre>
+<span class="preprocessor">#define</span> LEAF_CHECK(r) {<span class="directive">auto</span> _r = r; <span class="keyword">if</span>( !_r ) <span class="keyword">return</span> _r.error();}</code></pre>
 </div>
 </div>
 <div class="paragraph text-right">
@@ -4084,6 +4085,101 @@ This technique works exactly the same way when errors are reported using <code>l
 </div>
 <div class="paragraph">
 <p>This works similarly to <code>preload</code>, except that capturing of the <code>errno</code> is deferred until the destructor of the <code>propagate</code> object is called, which calls the passed lambda function to obtain the <code>errno</code>.</p>
+</div>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="technique_disparate_error_types">Working with Disparate Error Codes</h3>
+<div class="paragraph">
+<p>Because most libraries define their own mechanism for reporting errors, programmers often need to use multiple incompatible error-reporting interfaces in the same program. This led to the introduction of <code>boost::error_code</code> which later became <code>std::error_code</code>. Each <code>std::error_code</code> object is assigned an <code>error_category</code>. Libraries that communicate errors in terms of <code>std::error_code</code> define their own <code>error_category</code>. For libraries that do not, the user can "easily" define a custom <code>error_category</code> and still translate domain-specific error codes to <code>std::error_code</code>.</p>
+</div>
+<div class="paragraph">
+<p>But let`s take a step back and consider <em>why</em> do we have to express every error in terms of the same static type, <code>std::error_code</code>? We need this translation because the C&#43;&#43; static type-checking system makes it difficult to write functions that may return error objects of the disparate static types used by different libraries. Outside of this limitation, it would be preferable to be able to write functions that can communicate errors in terms of arbitrary C&#43;&#43; types, as needed.</p>
+</div>
+<div class="paragraph">
+<p>To drive this point further, consider the real world problem of mixing <code>boost::error_code</code> and <code>std::error_code</code> in the same program. In theory, both systems are designed to be able to express one error code in terms of the other. In practice, describing a <em>generic</em> system of error categorization in terms of another <em>generic</em> system of error categorization is not trivial.</p>
+</div>
+<div class="paragraph">
+<p>Ideally, functions should be able to communicate different error types without having to translate between them, and C&#43;&#43; does offer a mechanism that does just that, it&#8217;s called exception handling. And it is not a coincidence that the attempt to bind C&#43;&#43; exception types with the static interface of each function, A.K.A. exception specifications, was so problematic that it had to be abandoned (while I am an outspoken proponent of exception handling, I do acknowledge that in practice, for good reasons or otherwise, exception handling may not be available or permitted).</p>
+</div>
+<div class="paragraph">
+<p>LEAF solves this problem without using exception handling. For example, to mix <code>std::error_code</code> and <code>boost::error_code</code> in the same program, we could define:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code data-lang="c++"><span class="keyword">struct</span> e_std_error_code { std::error_code value; };
+<span class="keyword">struct</span> e_boost_error_code { boost::error_code value; };</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Then, a scope which is able to handle either <code>std::error_code</code> or <code>boost::error_code</code> would look like this:</p>
+</div>
+<div class="exampleblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code data-lang="c++">{
+  leaf::expect&lt;e_std_error_code,e_boost_error_code&gt; exp;
+
+  <span class="keyword">if</span>( leaf::result&lt;T&gt; r = f() )
+  {
+    <span class="comment">//Success</span>
+  }
+  <span class="keyword">else</span>
+  {
+    <span class="predefined-type">bool</span> matched = leaf::handle_error( exp, r,
+
+      leaf::match&lt;e_std_error_code&gt;( [ ]( std::error_code <span class="directive">const</span> &amp; e )
+      {
+        <span class="comment">//Handle std::error_code</span>
+      } ),
+
+      leaf::match&lt;e_boost_error_code&gt;( [ ]( boost::error_code <span class="directive">const</span> &amp; e )
+      {
+        <span class="comment">//Handle boost::error_code</span>
+      } )
+    );
+  }
+}</code></pre>
+</div>
+</div>
+<div class="paragraph text-right">
+<p><a href="#expect">Class Template <code>expect</code></a> |  <a href="#result">Class Template <code>result</code></a> | <a href="#handle_error-expect"><code>handle_error</code></a> | <a href="#match"><code>match</code></a></p>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>And here is a function which is able to report either <code>std::error_code</code> or <code>boost::error_code</code>:</p>
+</div>
+<div class="exampleblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code data-lang="c++">leaf::result&lt;T&gt; f()
+{
+  <span class="keyword">if</span>( std::error_code ec = g1() )
+  {
+    <span class="comment">//Success</span>
+  }
+  <span class="keyword">else</span>
+    <span class="keyword">return</span> leaf::error( e_std_error_code { ec } );
+
+  <span class="keyword">if</span>( boost::error_code ec = g2() )
+  {
+    <span class="comment">//Success</span>
+  }
+  <span class="keyword">else</span>
+    <span class="keyword">return</span> leaf::error( e_boost_error_code { ec } );
+}</code></pre>
+</div>
+</div>
+<div class="paragraph text-right">
+<p><a href="#result">Class Template <code>result</code></a> | <a href="#error">Class <code>error</code></a></p>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>Of course, under refactoring <code>f</code> can be changed to return any other error type as needed, without requiring a change in its static interface. With LEAF, such changes become transparent to any error-neutral function that calls and forwards errors from <code>f</code> to its caller; only the error handling scope needs to be updated to handle the new error types returned by <code>f</code>.</p>
 </div>
 <hr>
 </div>
