@@ -716,7 +716,7 @@ table.CodeRay td.code>pre{padding:0}
 <div class="ulist">
 <ul>
 <li>
-<p>Header-only, C++11, no dependencies.</p>
+<p>Header-only, no dependencies.</p>
 </li>
 <li>
 <p>No dynamic memory allocations.<sup class="footnote">[<a id="_footnoteref_1" class="footnote" href="#_footnotedef_1" title="View footnote.">1</a>]</sup></p>
@@ -1873,7 +1873,7 @@ The complete program from this tutorial is available <a href="https://github.com
 
 <span class="preprocessor">#define</span> LEAF_ERROR &lt;&lt;unspecified&gt;&gt;
 <span class="preprocessor">#define</span> LEAF_AUTO(v,r) <span class="directive">auto</span> _r_<span class="preprocessor">#</span><span class="preprocessor">#v</span> = r; <span class="keyword">if</span>( !_r_<span class="preprocessor">#</span><span class="preprocessor">#v</span> ) <span class="keyword">return</span> _r_<span class="preprocessor">#</span><span class="preprocessor">#v</span>.error(); <span class="directive">auto</span> &amp; v = *_r_<span class="preprocessor">#</span><span class="preprocessor">#v</span>
-<span class="preprocessor">#define</span> LEAF_CHECK(r) {<span class="directive">auto</span> _r = r; <span class="keyword">if</span>( !_r ) <span class="keyword">return</span> _r.error();}</code></pre>
+<span class="preprocessor">#define</span> LEAF_CHECK(r) {<span class="directive">auto</span> _r_<span class="preprocessor">#</span><span class="preprocessor">#v</span> = r; <span class="keyword">if</span>( !_r_<span class="preprocessor">#</span><span class="preprocessor">#v</span> ) <span class="keyword">return</span> _r_<span class="preprocessor">#</span><span class="preprocessor">#v</span>.error();}</code></pre>
 </div>
 </div>
 <div class="paragraph text-right">
@@ -3019,7 +3019,7 @@ The printing of each individual e-object is done by the rules described <a href=
 
 <span class="preprocessor">#define</span> LEAF_ERROR &lt;&lt;unspecified&gt;&gt;
 <span class="preprocessor">#define</span> LEAF_AUTO(v,r) <span class="directive">auto</span> _r_<span class="preprocessor">#</span><span class="preprocessor">#v</span> = r; <span class="keyword">if</span>( !_r_<span class="preprocessor">#</span><span class="preprocessor">#v</span> ) <span class="keyword">return</span> _r_<span class="preprocessor">#</span><span class="preprocessor">#v</span>.error(); <span class="directive">auto</span> &amp; v = *_r_<span class="preprocessor">#</span><span class="preprocessor">#v</span>
-<span class="preprocessor">#define</span> LEAF_CHECK(r) {<span class="directive">auto</span> _r = r; <span class="keyword">if</span>( !_r ) <span class="keyword">return</span> _r.error();}</code></pre>
+<span class="preprocessor">#define</span> LEAF_CHECK(r) {<span class="directive">auto</span> _r_<span class="preprocessor">#</span><span class="preprocessor">#v</span> = r; <span class="keyword">if</span>( !_r_<span class="preprocessor">#</span><span class="preprocessor">#v</span> ) <span class="keyword">return</span> _r_<span class="preprocessor">#</span><span class="preprocessor">#v</span>.error();}</code></pre>
 </div>
 </div>
 <div class="paragraph text-right">
